@@ -23,10 +23,10 @@ addpath('G:\code','G:\code\newPackage_020922')
 %path_to_data = 'G:\PhotomData\NEED TO ANALYZE\STIM ASSAYS\LCterminals\21060811_15Hz3sec_10Hz30sec\Avi_autoStim-210218-161112\dlight_CA1'; %must end in \
 %savename = 'dlight_BLA';
 
-path_to_data = 'G:\PhotomData\NEED TO ANALYZE\STIM ASSAYS\LCterminals\Dual GrabNE + dLight\21061416_10Hz3sec_15Hz30sec\Avi_autoStim-210218-161112\dlight_BLA\';
-savename = 'dlight_BLA';
+path_to_data = 'G:\PhotomData\MAGTRAIN042021\';
+savename = 'magtrain_daniel';
 subjectPattern = ['*' savename '*'];
-%subjectPattern = ['*31*'];
+subjectPattern = ['*-210*'];
 
 % Change subON to 1 if you want to subtract the LLS fit 
 % Must customize if you would like to subtract 405 signal from 470 signal 
@@ -36,21 +36,25 @@ subFit = 1; %1 to subtract the linear least squares fit
 % stimON and fearON should be 1 if you want the TTL from fear box or you
 % want recorded stim points, leave as zero otherwise
 % are you using stim or fearTTL? if you do both, you might need to adjust code
-details.stimON = 1;
+details.stimON = 0;
 details.fearON = 0;
 
 % do you want all figures to be shown? allfigures == 1 will show all
 % check = 1 will show you raw figs, linear least squares fit, and df/f%
-allfigures = 1;
-check = 1;
+allfigures = 0;
+check = 0;
 
 %do not edit
 saveON = 1; %save mat files
-saveTXTON = 1; %save txt files 0  = won't save
+saveTXTON = 0; %save txt files 0  = won't save
+details.twomice = 1; %1 if run with automated stim protocol - make sure tank name matches one below
+
 
 % Bruchas lab specifics
-details.static = 0; %1 if run on static system in Bruchas lab
-details.auto   = 1; %1 if run with automated stim protocol - make sure tank name matches one below
+details.static = 1; %1 if run on static system in Bruchas lab
+details.auto   = 0; %1 if run with automated stim protocol - make sure tank name matches one below
+
+
 %define tankname for tdt extraction
 tankname = 'Avi_stim-210608-085426';% 'Avi_stim-210913-102052';
 if details.auto
@@ -60,6 +64,11 @@ if details.auto
     tankname = 'Avi_autoStim_OneTrain-220819-103307';
    % tankname = 'Avi_StimRecord-220209-101641';
     tankname = 'Avi_autoStim-210218-161112';
+end
+if details.static
+    tankname = 'Raaj_twomice-210204-181611';
+    tankname = 'Daniel_2mice-190722-131320'; 
+    %tankname = 'Daniel_2mice-210910';
 end
 
 % What period of time do you want to baseline to? This will be your F0
@@ -103,7 +112,7 @@ workdir = workdir(~startsWith({workdir.name}, 'vars'));
 
 txtfiles = dir(['*.txt'])';
 
-for ii = 1:length(workdir)
+for ii = 48:length(workdir)
 %tdt files must match protocol
 blockname = workdir(ii).name; % name of your file
 if ~isempty(strfind(blockname,'.mat'))
@@ -115,28 +124,44 @@ filename = [blockname '.mat'];
 
 %convert all of the files 
 if saveTXTON
-    [dat470,dat405,Dts,timing] = tdtCONVERT(details, tankdir, tankname, blockname);
+    [dat470, dat405, Dts,timing] = tdtCONVERT(details, tankdir, tankname, blockname);    
 else
-    [dat470,dat405,Dts] = tdtCONVERT(details, tankdir, tankname, blockname);
+    [dat470,dat405, Dts] = tdtCONVERT(details, tankdir, tankname, blockname);
 end
+dat470A = dat470.dat470A;
+dat470C = dat470.dat470C;
+dat405A = dat405.dat405A;
+dat405C = dat405.dat405C;
+
 %sampling Frequency
 Fs = round(1/(max(Dts)/length(Dts))); %sample frequency Hz
 
 %% Clip the first second to get rid of artifact
-dat405(1:Fs) = mean(dat405(1:BLlength*Fs));
-dat470(1:Fs) = mean(dat470(1:BLlength*Fs));
+dat405A(1:Fs) = mean(dat405A(1:BLlength*Fs));
+dat405C(1:Fs) = mean(dat405C(1:BLlength*Fs));
 
+dat470A(1:Fs) = mean(dat470A(1:BLlength*Fs));
+dat470C(1:Fs) = mean(dat470C(1:BLlength*Fs));
 %% preprocessing, fit to linear least squares/exponential, subtract isobestic
 if subON
-    fit405 = LLS(dat470,dat405);
+    fit405A = LLS(dat470A,dat405A);
+    fit405C = LLS(dat470C,dat405C);
+
 %    fit405 = LLS(dat470(1:BLlength*Fs),dat405(1:BLlength*Fs));
     if subFit
-        dataFilt = (dat470 - fit405)./fit405; %470 - fit(405) - F0 then normalized to 405fit
-        dataFilt = dataFilt - mean(dataFilt(1:BLlength*Fs)); % Center your dF/F? CUSTOMIZE
+        dataFiltC = (dat470C - fit405C)./fit405C; %470 - fit(405) - F0 then normalized to 405fit
+        dataFiltC = dataFiltC - mean(dataFiltC(1:BLlength*Fs)); % Center your dF/F? CUSTOMIZE
+        
+        dataFiltA = (dat470A - fit405A)./fit405A; %470 - fit(405) - F0 then normalized to 405fit
+        dataFiltA = dataFiltA - mean(dataFiltA(1:BLlength*Fs)); % Center your dF/F? CUSTOMIZE
     else
-        dat470 = dat470 - dat405;  
-        dataFilt = dat470/mean(dataFilt(1:BLlength*Fs));
-        dataFilt = dataFilt - mean(dataFilt(1:BLlength*Fs)); % Center your dF/F? CUSTOMIZE
+        dat470C = dat470C - dat405C;  
+        dataFiltC = dat470C/mean(dataFiltC(1:BLlength*Fs));
+        dataFiltC = dataFiltC - mean(dataFiltC(1:BLlength*Fs)); % Center your dF/F? CUSTOMIZE
+
+        dat470A = dat470A - dat405A;  
+        dataFiltA = dat470A/mean(dataFiltA(1:BLlength*Fs));
+        dataFiltA = dataFiltA - mean(dataFiltA(1:BLlength*Fs)); % Center your dF/F? CUSTOMIZE
     end
     
     if check ==1
@@ -175,14 +200,7 @@ if subON
         hold off
     end
     
-    % Do you want to subtract an exponential decay or LLS? 
-    % Make sure the one you want is ending up in the dfF variable
-    f2 = fit(Dts,dat470,'exp2');
-    fitcurve= f2(Dts);
-    dataFilt2 =  dat470 - fitcurve;
-    
-    dataFilt2 = (dat470 - dat405)./dat405; %470 - fit(405) - F0 then normalized to 405fit
-    dataFilt2 = dataFilt2 - mean(dataFilt2(1:BLlength*Fs)); % Center your dF/F? CUSTOMIZE
+   
 
     if check ==1
         % plot raw signals, linear least squares fit, and the df/f%
@@ -255,9 +273,13 @@ end
 
 %% calculate dF/F
 
-dfF = dataFilt; %already dF/F %(dataFilt - median(dataFilt))./abs(median(dat470)); % this gives deltaF/F
-dfFPerc = dfF.*100; % make a percentage
-data1 = dfFPerc; %data1
+dfFA = dataFiltA; %already dF/F %(dataFilt - median(dataFilt))./abs(median(dat470)); % this gives deltaF/F
+dfFPercA = dfFA.*100; % make a percentage
+data1A = dfFPercA; %data1
+
+dfFC = dataFiltC; %already dF/F %(dataFilt - median(dataFilt))./abs(median(dat470)); % this gives deltaF/F
+dfFPercC = dfFC.*100; % make a percentage
+data1C = dfFPercC; %data1
         
 % plot subtracted signal w/o baseline correction
 %{
@@ -290,42 +312,50 @@ ylim([-20 20])
 
 %% Recalculating the way Christian used to do
 
-matlabFit = fit(Dts,(dat470-dat405),'exp2');
-fitcurv = matlabFit(Dts);
-dataFiltOld = dat470 - dat405 - fitcurv;
-normDat1 = (dataFiltOld - median(dataFiltOld))./abs(median(dat470)); % this gives deltaF/F
-normDat = normDat1.*100; % make a percentage
-dataOld = normDat;
-figure
-plot(Dts,dataOld)
+matlabFitA = fit(Dts,(dat470A-dat405A),'exp2');
+fitcurvA = matlabFitA(Dts);
+dataFiltOldA = dat470A - dat405A - fitcurvA;
+normDat1A = (dataFiltOldA - median(dataFiltOldA))./abs(median(dat470A)); % this gives deltaF/F
+normDatA = normDat1A.*100; % make a percentage
+dataOldA = normDatA;
 
+matlabFitC = fit(Dts,(dat470C-dat405C),'exp2');
+fitcurvC = matlabFitC(Dts);
+dataFiltOldC = dat470C - dat405C - fitcurvC;
+normDat1C = (dataFiltOldC - median(dataFiltOldC))./abs(median(dat470C)); % this gives deltaF/F
+normDatC = normDat1C.*100; % make a percentage
+dataOldC = normDatC;
 
+dataOld.dataOldA = dataOldA;
+dataOld.dataOldC = dataOldC;
 
 %% Save file as .mat file with specified filename
 if saveON && saveTXTON
     if details.fearON && ~details.stimON
-        save(filename,'dat470','dat405','fit405', 'dfF', 'dfFPerc','Dts','timing', 'f2', 'dataFilt2',"dataOld");
+        save(filename,'dat470A','dat405A','fit405A', 'dat470C','dat405C','fit405C', 'dfFA','dfFC', 'dfFPercA','dfFPercC','Dts','timing',  'dataFiltA','dataFiltC', "dataOld");
     elseif ~details.fearON && details.stimON
-        save(filename,'dat470','dat405','fit405', 'dfF', 'dfFPerc','Dts','timing', 'f2', 'dataFilt2',"dataOld");
+        save(filename,'dat470A','dat405A','fit405A', 'dat470C','dat405C','fit405C', 'dfFA','dfFC', 'dfFPercA','dfFPercC','Dts','timing',  'dataFiltA','dataFiltC',"dataOld");
     elseif details.fearON && details.stimON
-       save(filename,'dat470','dat405','fit405', 'dfF', 'dfFPerc','Dts','timingFear','timingStim', 'f2', 'dataFilt2',"dataOld");
+       save(filename,'dat470A','dat405A','fit405A', 'dat470C','dat405C','fit405C', 'dfFA','dfFC', 'dfFPercA','dfFPercC','Dts','timingFear','timingStim',  'dataFiltA','dataFiltC',"dataOld");
     else
-        save(filename,'dat470','dat405','fit405', 'dfF','dfFPerc','Dts', 'f2', 'dataFilt2',"dataOld");
+        save(filename,'dat470A','dat405A','fit405A', 'dat470C','dat405C','fit405C', 'dfFA','dfFC','dfFPercA','dfFPercC','Dts',  'dataFiltA','dataFiltC',"dataOld");
     end  
 elseif saveON
     if details.fearON && ~details.stimON
-        save(filename,'dat470','dat405','fit405', 'dfF', 'dfFPerc','Dts', 'f2', 'dataFilt2',"dataOld");
+        save(filename,'dat470A','dat405A','fit405A', 'dat470C','dat405C','fit405C','dfFA','dfFC', 'dfFPercA','dfFPercC', 'Dts',  'dataFiltA','dataFiltC',"dataOld");
     elseif ~details.fearON && details.stimON && subON
-        save(filename,'dat470','dat405','fit405', 'dfF', 'dfFPerc','Dts', 'f2', 'dataFilt2',"dataOld");
+        save(filename,'dat470A','dat405A','fit405A', 'dat470C','dat405C','fit405C','dfFA','dfFC','dfFPercA','dfFPercC','Dts',  'dataFiltA','dataFiltC',"dataOld");
     elseif ~details.fearON && details.stimON && ~subON
-        save(filename,'dat470','dat405', 'dfF', 'dfFPerc','Dts');
+        save(filename,'dat470','dat405', 'dfFA','dfFC','dfFPercA','dfFPercC','Dts');
     elseif details.fearON && details.stimON
-       save(filename,'dat470','dat405','fit405', 'dfF', 'dfFPerc','Dts', 'f2', 'dataFilt2',"dataOld");
+       save(filename,'dat470A','dat405A','fit405A', 'dat470C','dat405C','fit405C','dfFA','dfFC', 'dfFPercA','dfFPercC','Dts',  'dataFiltA','dataFiltC',"dataOld");
     else
-        save(filename,'dat470','dat405','fit405', 'dfF','dfFPerc','Dts', 'f2', 'dataFilt2',"dataOld");
+        save(filename,'dat470A','dat405A','fit405A', 'dat470C','dat405C','fit405C','dfFA','dfFC','dfFPercA','dfFPercC','Dts',  'dataFiltA','dataFiltC',"dataOld");
     end  
 end
 end
+
+
 
 
 %% create txt files
