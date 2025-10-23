@@ -1,5 +1,5 @@
 function [datOUT,ts,timing] = tdtCONVERT(details, tankdir, tankname, blockname)
-%  File to convert all TDT files within
+%  Function to extract all tdt files and data streams from their proprietary structures.
 %  static refers to the static system in the Bruchas lab
 %  auto refers to the automated stim protocol on the Bruchas cart
 

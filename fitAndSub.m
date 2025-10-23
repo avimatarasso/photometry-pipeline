@@ -1,5 +1,8 @@
 function [dataFilt,fitIso,f2,fitcurve,dataFiltExp] = fitAndSub(datSensor, datIso, Dts,details, SensorStr, IsoStr,subject)
-%  File to convert all TDT files within
+%  File to convert all TDT recordings to df/F
+% Apply a linear least squared fit of the isobestic to the sensor, and
+% subtract the sensor signal from the isobestic. The function also plots 
+% these time series
 
 BLlength = details.BLlength;
 Fs   = details.Fs;

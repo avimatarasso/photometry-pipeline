@@ -19,36 +19,33 @@ PhotomPack = (genpath('G:\code\Updated_package_102025'));
 addpath(PhotomPack); %addpath(dataDir);
 
     
-%% CUSTOMIZE this whole section
-%do you only want to look at the averaged data of *some* of the subjects?
+%% CUSTOMIZE this whole section, oriented towards TDT file structure
+%paths must be in a cell array
+path_to_data = 'G:\PhotomData\DBHKO\LC-CA1stim_GRABDA\5hz3s, 20hz3s\Temp Testing FOlder\Avi_autoStim-251001-140754';
+path_to_data = {path_to_data};
+
 % if you have subjects 0,1,2,4 in the directory you're working in, 
 % and you want to look at 1 and 4, type [2 4];
-
-%paths must be in a cell array
-path_to_data = {'C:\Users\bruchasadmin\Desktop\20hz30s5hz3s\Avi_autoStim-220623-085600'};
-path_to_data = {'G:\PhotomData\DBHKO\LC-CA1stim_GRABDA\5hz3s, 20hz3s\Temp Testing FOlder\Avi_autoStim-251001-140754'}; %LCinhibCNO
-%%%%%%%% change the savename to get each timelocked trial (usually of stim)
 doYouWantAll = 1; % make 0 if you want to only choose some of the subs %and define which ones you want through whichSub
-% if doing multip[le paths, want to be careful and check whichSub you choose
 whichSub = [1 2]; % which subjects do you want to look at/for multiple regions include all
 
 %%% events what event do you want to look at
-eventLabel  = 3; %i usually do 2 for tail lift and 1 for stim %-2 = leaveClosedTS, 1 = loco.startTS
-manualEvent = 0; %1 if the scoring was done manually, 0 if TTL
+eventLabel  = 3; %Label in column 2
+% Adjust the timeseries if recording variable frame rate events, 
+manualEvent = 0; 
 
 %How many trials and do you want all?
-allTrials = 1; %if you don  't want all trials, make allTrials = 0
+allTrials = 1; %if you don't want all trials, make allTrials = 0
 if ~allTrials  
-    trialsKept   = 1; % how many of eventLabel# did you do?
-    trialsOI = 1:trialsKept; % 1:10 for example, which trials are you interested in
-    trialsOI = 1; % 1:10 for example, which trials are you interested in
+    trialsKept = 1; % how many of eventLabel# did you do?
+    trialsOI = 1:trialsKept; % 2:5 for example, which trials are you interested in
 end
 
 %customize these lines + defineSubject.m for your specific metadata + style
-%%%% commonStr == common string between your experiments of interest
 region = 'GRABDA_CA1'; 
-commonStr = region;
-exp = '20hz'; treatment = 'HET_UPDATED_PACK';
+commonStr = region; %common string between your experiments of interest
+exp = '20hz'; 
+treatment = 'HET_UPDATED_PACK';
 
 currDate = datestr(date,'yymmdd');
 savename = [region '_' exp '_' treatment '_' currDate];
@@ -74,46 +71,39 @@ if contains(region,'dual')
     savename = [region '_' sensor '_' treatment '_' exp '']
     titleName = [region2 ' ' sensor ' ' exp ' ' treatment ''];
 end
-%regionON = 0; %mark as 0 if region not included in name
 %savename = [region '_taillift' FP]; %3
-
-%titleName = [region2 ' ' FP ' response to tail lift'];
-%titleName = ['VTA stim,' region2 ' response at 20hz for 3s'];
-%titleName = ['tdtmto control stim for 20hz 30s, ' region2 'response'];
 %titleName = ['LC terminal stim at 20hz for 3s, dlight in vCA, SAL'];
 
-%Do you want to adjust so its just the most recent headentry
+% If you have a repeated event and you only want the first event after
+% another event (i.e. - head entry after a reward) within 10s (default),
+% include headEntry in the savename string
 if contains(savename,'headEntry')
     headEntryQ = 1; %make sure eventLabel is 2!
-if headEntryQ
-    warning('headEntryQ is 1!')
-    if eventLabel ~= 2
-        warning('eventLabel is not 2!')
+    if headEntryQ
+        warning('headEntryQ is 1!')
+        if eventLabel ~= 2
+            warning('eventLabel is not 2!')
+        end
     end
-end
 else
     headEntryQ = 0;
 end
 
 %%% do you want to z-score? if yes, make zQuest = 1, if df/f, make zQuest = 0
 zQuest = 1; zBL = 0;
-% do you want not All of the Trials? if yes ==1. If negative, will do the last ones 
-normalQ = 1; %do you want to normalize to time immediately prior to event
-oldQ = 0; % do you want to use the old way of analyzing data (Christian's way)
+normalQ = 1; % do you want to center each trial to the mean before event
+oldQ = 0; % do you want no LLS subtraction?
 
-%%% do you want each subject's timelocked and averaged traces and heat map?
+% do you want each subject's timelocked and averaged traces and heat map?
 % if averageQuest = 1, they will be shown when you run the code
 averageQuest = 0;
 
-%%% how much time (in s) after the event do you want to look at 
-%timewindow = 30; % +/- seconds from event %usually 120
-%specialCase = 2; %multiplier for timewindow to end. [-timewindow specialCase*timewindow]
-% If only want to see time within +/- timewindow, keep specialCase as 1
-%older options above, use timeBefore and after below instead
-timeBefore = 30;%2*60;% 30; %30 to 60 for short, 30 to 180
-timeAfter  = 60;%7*60; 
+% how much time (in s) after the event do you want to look at 
+timeBefore = 30; 
+timeAfter  = 60;
 xlims = [-timeBefore timeAfter];
-delay = 0;
+% you can add a delay to the eventTime if you have some defined second event
+delay = 0; 
 
 %CUSTOMIZE
 dsFactor = 500; % how much do you want to downsample by?
@@ -123,6 +113,8 @@ FS = 1017.25; % sampling frequency of synapse
 %% Define Directory and constant variables
 
 workdir = defineDir(path_to_data,commonStr);
+% Allows us to ignore temporary files in the directory 
+workdir = workdir(~startsWith({workdir.name}, '._'));
 
 %Define the working directories based on whichSub
 if ~doYouWantAll
@@ -138,8 +130,6 @@ lengthOfBL = floor(abs(timeBefore)*FS);
 lengthOfData = floor((timeAfter+timeBefore)*FS);
 trials = []; firstTimings = []; cols = 0;
 
-% Allows us to ignore temporary files in the directory 
-workdir = workdir(~startsWith({workdir.name}, '._'));
 %% save current script
 FileNameAndLocation = [mfilename('fullpath')];
 if ~strcmp(path_to_data(end),'\')
@@ -167,9 +157,7 @@ for subjectIdx = 1:length(workdir)
     photoname = workdir(subjectIdx).name;
     load(photoname)
     
-    if oldQ == 1
-        data1 = dataOld;
-    elseif contains(region,'dual')
+    if contains(region,'dual') % dual GFP and RFP analysis
         if strcmp(FP,'GFP')
             data1 = dfFGFP;
             dfF   = dfFGFP;
@@ -177,7 +165,6 @@ for subjectIdx = 1:length(workdir)
             data1 = dfFRFP;
             dfF   = dfFRFP;
         end
-
         if exist('dat405','var')
             rawSensor = data1; rawIso = dat405; %static system
         else
@@ -189,6 +176,7 @@ for subjectIdx = 1:length(workdir)
     else
         warning('dfF not calculated, probably using old data, not fit for LLS')
     end
+
     %CUSTOMIZE the labels and subject names you may want
     [subStr, subNumb,subjectLabel, txtName] = defineSubject(photoname, region,subjectIdx);
 
@@ -197,7 +185,7 @@ for subjectIdx = 1:length(workdir)
         txtName = txtName{subjectIdx}.name;
     end
 
-    % txtName = [photoname '.txt'];
+    % read text file
     rawtimings = dlmread(txtName); %CUSTOMIZE
 
     if headEntryQ
@@ -207,7 +195,6 @@ for subjectIdx = 1:length(workdir)
         eventTime = rawtimings(:,1);
         eventtype = round(rawtimings(:,2));
         eventTime = eventTime(eventtype==eventLabel);
-        %eventTime = eventTime(end);
     end
 
     if ~isempty(eventTime)
@@ -219,6 +206,7 @@ for subjectIdx = 1:length(workdir)
     
     % don't need to look at the timings if there is no event
     if isempty(eventTime)
+        warning('No events with this event label')
         continue
     end
     eventTime = eventTime(~del_idx); % deletes events with less than 10 s in between
@@ -245,7 +233,7 @@ for subjectIdx = 1:length(workdir)
         correctTime = max(Dts);
         vidDir = photoname(1:end-4); 
         cd(vidDir); 
-        vidName = dir(['Avi*' vidDir '*.avi']); vD = vidName.name;
+        vidName = dir(['*' vidDir '*.avi']); vD = vidName.name;
         if strcmp(vD(1:2), '._')
             vD = vidName(2).name;
         end
@@ -257,13 +245,11 @@ for subjectIdx = 1:length(workdir)
         allTimings{subjectIdx} = eventTime;
     end
 
-    
-    
     %find baseline for each session, between baselineTime 
     baselineMu(subjectIdx) = mean(data1(ceil(eventTime(1)*FS)-(ceil(baselineTime*FS)):ceil(eventTime(1)*FS)));
-    baselineSD(subjectIdx) = std(data1(ceil(eventTime(1)*FS)-(ceil(baselineTime*FS)):ceil(eventTime(1)*FS)));%std(data1(1:ceil(baselineTime*FS)));
+    baselineSD(subjectIdx) = std(data1(ceil(eventTime(1)*FS)-(ceil(baselineTime*FS)):ceil(eventTime(1)*FS)));
     
-    % Z score photometry data
+    % Z score photometry data, either full timeseries mean or just initial baseline
     if zQuest
         data1 = (data1-mean(data1))./std(data1);
         warning('You z-scored your data to the full session')
@@ -302,7 +288,6 @@ for subjectIdx = 1:length(workdir)
             cols = trialsOI;
         end
     end
-   
 
     if averageQuest
         heatFig = 200+subjectIdx;
@@ -311,17 +296,16 @@ for subjectIdx = 1:length(workdir)
     end
     
     if normalQ
-        [nData] = centAndNormData(nData, FS, timeBefore); %sDiff, eventTime); %normalized to pre-event
+        [nData] = centAndNormData(nData, FS, timeBefore); % currently centering only
         %NcData = cData/std(data1(1:round(180*FS))); 
     end
     
     % save your data by each subject for plotting 
     allData(:,cols) = nData(:,trialsOI); 
     
+    % Pad the data with zeros at the end to make the individual datafit
     if exist('indData','var')
         minTime = floor(min(length(indData),length(data1)))/FS; 
-        
-        %
         if length(indData)>length(data1)
             data1PAD = padarray(data1, [length(indData)-length(data1) 0],'post');
             indData(:,subjectIdx) =  data1PAD;
@@ -336,6 +320,7 @@ for subjectIdx = 1:length(workdir)
     end
     firstTimings = [firstTimings eventTime(1)];
     
+    % Add raw data to structure
     raw.rawIso(subjectIdx,:) = rawIso;
     raw.rawSensor(subjectIdx,:) = rawSensor;
     if exist('fitIso','var')
@@ -351,15 +336,11 @@ for subjectIdx = 1:length(workdir)
     end
     %plot individual averages and heat map
     figureN = subjectIdx+100;
-    plotIndividual(figureN, eventTime, raw, data1, subName, subjectIdx, dsFactor, time)%(figureN, eventTime, raw, data1, nData, subName, subjectIdx, dsFactor, time,FS,xlims, region, sensor)
-    
+    plotIndividual(figureN, eventTime, raw, data1, subName, subjectIdx, dsFactor, time)    
 end
 
 
 %% plots
-%zeroidx=find(mean(allData,1)==0);
-%allData(:,zeroidx) = [];
-
 dataForPlots.allData = allData;
 dataForPlots.indData = indData;
 dataForPlots.minTime = minTime;
@@ -384,51 +365,7 @@ end
 % create plots, might want to CUSTOMIZE
 createPlots(dataForPlots)
 
-
-%% save variables in folder
+%% save variables in folder and figures
 timevec=linspace(-timeBefore,timeAfter,length(allData));
-if isfolder([region '_' sensor])
-    cd([region '_' sensor])
-    if exist(savename,'var')
-        save(savename, 'allData','timingIdxs','timevec','path_to_data','dataForPlots','-append')
-    else
-        save(savename, 'allData','timingIdxs','timevec','path_to_data','dataForPlots')
-    end
-    cd('..')
-else
-    mkdir([region '_' sensor])
-    cd([region '_' sensor])
-    if exist(savename,'var')
-        save(savename, 'allData','timingIdxs','timevec','path_to_data','dataForPlots','-append')
-    else
-        save(savename, 'allData','timingIdxs','timevec','path_to_data','path_to_data','dataForPlots')
-    end
-    cd('..')
-    % close all
-end
-%}
 
-%% Save All Figures
-answer = questdlg('All graphs are saved. Would you like to save the individual figures too?', ...
-	'Saving?', ...
-	'Yes','No','No');
-switch answer
-    case 'Yes'
-        figureSaveName = savename;
-        if exist([region '_' sensor],'dir')
-            cd([region '_' sensor])
-        else
-            mkdir([region '_' sensor])
-            cd([region '_' sensor])
-        end
-        tempdir = pwd;
-        FolderName = tempdir;   % Your destination folder
-        FigList = findobj(allchild(0), 'flat', 'Type', 'figure'); FigList2 = FigList(1:end);
-        savefig(FigList2, fullfile(FolderName,[figureSaveName '.fig']));
-       % save([savename '.mat']);
-        disp('Figures have been saved!')        
-        cd('..')
-    case 'No'
-        disp('You may manually save figures if you want.')
-end
-
+finalSave(savename, sensor, region, allData,timingIdxs,timevec,path_to_data,dataForPlots)
