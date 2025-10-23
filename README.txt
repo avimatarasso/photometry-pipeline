@@ -1,4 +1,4 @@
-All code below was adapted by Avi Matarasso from the Bruchas lab pipeline, originally developed by Christian Pedersen.
+All code below was adapted by Avi Matarasso from the Bruchas lab pipeline, originally developed by Christian Pedersen. Reach out to akmat@uw.edu with any questions.
 
 If you are recording from a TdT machine, you will initiate conversion of TDT files to matlab data and .mat files from the tdtExtract.m script.
 
